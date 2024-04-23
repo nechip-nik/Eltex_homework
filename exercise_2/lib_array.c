@@ -25,6 +25,7 @@ void array() {
   }
 }
 
+
 void reverse() {
   printf("Вывод массива в обратном порядке размера на M=10\n");
   int array[M];
@@ -46,6 +47,7 @@ void reverse() {
   }
   printf("\n");
 }
+
 
 void triangle() {
   int array[M][M];
@@ -70,6 +72,8 @@ void triangle() {
     printf("\n");
   }
 }
+
+
 void printSpiral() {
   printf("Заполнение матрицы числами улиткой.\n");
   int array[X][X];
