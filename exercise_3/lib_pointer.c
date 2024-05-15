@@ -42,28 +42,37 @@ char *findSubstring() {
   char str[10];
   char sub[10];
   char *result = NULL;
+
   printf("Введите строку\n");
-  scanf("%s", str);
+  if (scanf("%9s", str) != 1) {
+    printf("Ошибка чтения строки\n");
+    return NULL;
+  }
+
   printf("Введите подстроку\n");
-  scanf("%s", sub);
+  if (scanf("%9s", sub) != 1) {
+    printf("Ошибка чтения подстроки\n");
+    return NULL;
+  }
+
   char *ptr_str = str;
-  char *ptr_sub = NULL;
+  char *ptr_sub = sub;
+
   while (*ptr_str != '\0') {
-    ptr_sub = sub;
     if (*ptr_str == *ptr_sub) {
-      result = ptr_str;
-      while (*ptr_str != '\0' && *ptr_sub != '\0' && *ptr_str == *ptr_sub) {
-        ptr_str++;
-        ptr_sub++;
+      char *temp_str = ptr_str;
+      char *temp_sub = ptr_sub;
+      while (*temp_str != '\0' && *temp_sub != '\0' && *temp_str == *temp_sub) {
+        temp_str++;
+        temp_sub++;
       }
-      if (*ptr_str == '\0' || *ptr_sub == '\0') {
+      if (*temp_sub == '\0') {
+        result = ptr_str;
         printf("Указатель на первый символ : %c\n", *result);
         return result;
       }
-
-    } else {
-      ptr_str++;
     }
+    ptr_str++;
   }
   return NULL;
 }
