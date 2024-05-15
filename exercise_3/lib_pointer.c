@@ -57,11 +57,12 @@ char *findSubstring() {
 
   char *ptr_str = str;
   char *ptr_sub = sub;
-
+  char *temp_str = NULL;
+  char *temp_sub = NULL;
   while (*ptr_str != '\0') {
     if (*ptr_str == *ptr_sub) {
-      char *temp_str = ptr_str;
-      char *temp_sub = ptr_sub;
+      temp_str = ptr_str;
+      temp_sub = ptr_sub;
       while (*temp_str != '\0' && *temp_sub != '\0' && *temp_str == *temp_sub) {
         temp_str++;
         temp_sub++;
