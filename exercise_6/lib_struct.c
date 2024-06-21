@@ -67,8 +67,6 @@ void find_abonent(Abonent *phone_book, int phone_book_size) {
     if (subscriber_search(phone_book[i].name, name)) {
       printf("%d: %s %s %s\n", i + 1, phone_book[i].name,
              phone_book[i].second_name, phone_book[i].tel);
-    } else {
-      printf("Такого абонента не существует.\n");
     }
   }
 }
