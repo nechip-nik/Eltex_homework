@@ -1,7 +1,6 @@
 #include "lib_struct.h"
 #include <stdio.h>
 #include <string.h>
-Abonent phone_book[100];
 int subscriber_search(char *str, char *sub_str) {
   if ((strlen(str) == strlen(sub_str)) && strstr(str, sub_str)) {
     return 1;
@@ -9,7 +8,7 @@ int subscriber_search(char *str, char *sub_str) {
   return 0;
 }
 
-void adding_a_subscriber() {
+void adding_a_subscriber(Abonent *phone_book) {
   for (int i = 0; i <= 100; i++) {
     if (i == 100) {
       printf("Справочник переполнен, больше нельзя побавить абонентов.");
@@ -27,7 +26,7 @@ void adding_a_subscriber() {
     }
   }
 }
-void print_abonent() {
+void print_abonent(Abonent *phone_book) {
   printf("\n\n");
   for (int i = 0; i < 100; i++) {
 
@@ -35,7 +34,7 @@ void print_abonent() {
            phone_book[i].second_name, phone_book[i].tel);
   }
 }
-void delete_abonent() {
+void delete_abonent(Abonent *phone_book) {
   printf("\n\nВведите имя\n");
   char name[10];
   scanf("%s", name);
@@ -48,7 +47,7 @@ void delete_abonent() {
     }
   }
 }
-void find_abonent() {
+void find_abonent(Abonent *phone_book) {
   printf("\n\n");
   char name[10];
   scanf("%s", name);

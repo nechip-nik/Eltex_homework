@@ -8,9 +8,9 @@ typedef struct {
 } Abonent;
 
 int subscriber_search(char *str, char *sub_str);
-void adding_a_subscriber();
-void print_abonent();
-void delete_abonent();
-void find_abonent();
+void adding_a_subscriber(Abonent *phone_book);
+void print_abonent(Abonent *phone_book);
+void delete_abonent(Abonent *phone_book);
+void find_abonent(Abonent *phone_book);
 
 #endif

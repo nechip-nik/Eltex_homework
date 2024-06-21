@@ -3,7 +3,8 @@
 #include <string.h>
 
 int main() {
-
+  Abonent phone_book[100];
+  memset(phone_book, 0, sizeof(phone_book));
   char a;
   while (1) {
     printf("\n\n1. Добавить абонента.\n");
@@ -14,16 +15,16 @@ int main() {
     scanf(" %c", &a);
     switch (a) {
     case '1':
-      adding_a_subscriber();
+      adding_a_subscriber(phone_book);
       break;
     case '2':
-      delete_abonent();
+      delete_abonent(phone_book);
       break;
     case '3':
-      find_abonent();
+      find_abonent(phone_book);
       break;
     case '4':
-      print_abonent();
+      print_abonent(phone_book);
 
       break;
     case '5':
