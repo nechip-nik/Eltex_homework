@@ -11,12 +11,14 @@ typedef struct {
     char *files[MAX_FILES];
     int count;
     int selected;
+    int scroll_offset;
 } Panel;
 
 void init_panel(Panel *panel, const char *path) {
     panel->path = strdup(path);
     panel->count = 0;
     panel->selected = 0;
+    panel->scroll_offset = 0;
 }
 
 void free_panel(Panel *panel) {
@@ -51,8 +53,9 @@ void update_panel(Panel *panel) {
 void draw_panel(Panel *panel, WINDOW *win, int y, int x) {
     wclear(win);
 
-    // Get the width of the window
+    // Get the width and height of the window
     int win_width = getmaxx(win);
+    int win_height = getmaxy(win);
 
     // Truncate the path if it's too long
     char truncated_path[win_width + 1];
@@ -63,11 +66,18 @@ void draw_panel(Panel *panel, WINDOW *win, int y, int x) {
     }
 
     mvwprintw(win, 0, 0, "%s", truncated_path);
-    for (int i = 0; i < panel->count; i++) {
+
+    int start = panel->scroll_offset;
+    int end = start + win_height - 1;
+    if (end > panel->count) {
+        end = panel->count;
+    }
+
+    for (int i = start; i < end; i++) {
         if (i == panel->selected) {
             wattron(win, A_REVERSE);
         }
-        mvwprintw(win, i + 1, 0, "%s", panel->files[i]);
+        mvwprintw(win, i - start + 1, 0, "%s", panel->files[i]);
         if (i == panel->selected) {
             wattroff(win, A_REVERSE);
         }
@@ -81,22 +91,46 @@ int is_directory(const char *path) {
     return S_ISDIR(statbuf.st_mode);
 }
 
-void navigate_panel(Panel *panel, int key) {
+void navigate_panel(Panel *panel, int key, int win_height) {
     switch (key) {
         case KEY_UP:
-            if (panel->selected > 0) panel->selected--;
+            if (panel->selected > 0) {
+                panel->selected--;
+                if (panel->selected < panel->scroll_offset) {
+                    panel->scroll_offset = panel->selected;
+                }
+            }
             break;
         case KEY_DOWN:
-            if (panel->selected < panel->count - 1) panel->selected++;
+            if (panel->selected < panel->count - 1) {
+                panel->selected++;
+                if (panel->selected >= panel->scroll_offset + win_height - 1) {
+                    panel->scroll_offset = panel->selected - (win_height - 2);
+                }
+            }
             break;
         case KEY_ENTER:
         case '\n': {
             char new_path[1024];
             snprintf(new_path, sizeof(new_path), "%s/%s", panel->path, panel->files[panel->selected]);
             if (is_directory(new_path)) {
-                free(panel->path);
-                panel->path = strdup(new_path);
+                if (strcmp(panel->files[panel->selected], "..") == 0) {
+                    // Move up one directory
+                    char *last_slash = strrchr(panel->path, '/');
+                    if (last_slash != NULL && last_slash != panel->path) {
+                        *last_slash = '\0';
+                    } else if (last_slash == panel->path) {
+                        *(last_slash + 1) = '\0';
+                    } else {
+                        *panel->path = '\0';
+                    }
+                } else {
+                    // Move down one directory
+                    free(panel->path);
+                    panel->path = strdup(new_path);
+                }
                 panel->selected = 0;
+                panel->scroll_offset = 0;
                 update_panel(panel);
             }
             break;
@@ -136,9 +170,9 @@ int main() {
             current_panel = !current_panel;
         } else {
             if (current_panel == 0) {
-                navigate_panel(&left_panel, key);
+                navigate_panel(&left_panel, key, height);
             } else {
-                navigate_panel(&right_panel, key);
+                navigate_panel(&right_panel, key, height);
             }
         }
     }
