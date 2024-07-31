@@ -4,8 +4,8 @@
 #include <unistd.h>
 
 int main() {
-  pid_t pid;
   int status;
+  pid_t pid;
 
   pid = fork();
 
@@ -22,6 +22,4 @@ int main() {
       printf("Дочерний процесс завершился с кодом %d\n", WEXITSTATUS(status));
     }
   }
-
-  return 0;
 }
