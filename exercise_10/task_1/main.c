@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 int main() {
-  int status;
   pid_t pid;
 
   pid = fork();
@@ -16,8 +15,9 @@ int main() {
     printf("Дочерний процесс: PID = %d, PPID = %d\n", getpid(), getppid());
     exit(EXIT_SUCCESS);
   } else {
+    int status;
     printf("Родительский процесс: PID = %d, PPID = %d\n", getpid(), getppid());
-    wait(&status);
+    waitpid(pid,&status,0);
     if (WIFEXITED(status)) {
       printf("Дочерний процесс завершился с кодом %d\n", WEXITSTATUS(status));
     }
