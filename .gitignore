@@ -3,3 +3,5 @@ obj
 bin
 output.txt
 realization_2
+test_no_mutex
+test_mutex
