@@ -70,7 +70,7 @@ int main() {
                 full_msg[i] = ' ';
             }
         }
-        mq_send(server_queue, msg, strlen(full_msg) + 1, 0);
+        mq_send(server_queue, full_msg, strlen(full_msg) + 1, 0);
     }
 
     mq_close(client_queue);

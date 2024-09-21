@@ -27,7 +27,7 @@ void* handle_client(void* arg) {
             for (int i = 0; i < client_count; i++) {
                 if (clients[i].client_queue != client->client_queue) {
                     mq_send(clients[i].client_queue, msg, strlen(msg) + 1, 0);
-                    printf("Sent to %s: %s\n", clients[i].name, msg);
+                    //printf("Sent to %s: %s\n", clients[i].name, msg);
                 }
             }
         }
@@ -62,6 +62,7 @@ int main() {
         printf("skip\n");
             if (strncmp(msg, CONNECT_PREFIX, strlen(CONNECT_PREFIX)) == 0) {
                 // Это сообщение о подключении
+                printf("зашел в цикл new client\n");
                 char client_name[50];
                 strcpy(client_name, msg + strlen(CONNECT_PREFIX));
                 printf("New client connected: %s\n", client_name);
@@ -85,26 +86,31 @@ int main() {
                     for (int i = 0; i < client_count; i++) {
                         if (clients[i].client_queue != client_queue) {
                             mq_send(clients[i].client_queue, join_msg, strlen(join_msg) + 1, 0);
-                            printf("Sent to %s: %s\n", clients[i].name, join_msg);
+                            //printf("Sent to %s: %s\n", clients[i].name, join_msg);
                         }
                     }
 
-                    if (pthread_create(&threads[client_count - 1], NULL, handle_client, &clients[client_count - 1]) != 0) {
-                        perror("pthread_create");
-                        exit(1);
-                    }
+                    // if (pthread_create(&threads[client_count - 1], NULL, handle_client, &clients[client_count - 1]) != 0) {
+                    //     perror("pthread_create");
+                    //     exit(1);
+                    // }
                 } else {
                     printf("Too many clients\n");
                 }
             } else {
                 // Это обычное сообщение
+                printf("зашел условия обычного сообщения\n");
+                printf("%s\n",msg);
+                char bullmsg[MAX_MSG_SIZE];
+                strcpy(bullmsg, msg);
                 char* client_name = strtok(msg, ":");
-                char* client_msg = strtok(NULL, "");
+                printf("%s\n",bullmsg);
+                //char* client_msg = strtok(msg, "");
 
                 for (int i = 0; i < client_count; i++) {
                     if (strcmp(clients[i].name, client_name) != 0) {
-                        mq_send(clients[i].client_queue, msg, strlen(msg) + 1, 0);
-                        printf("Sent to %s: %s\n", clients[i].name, msg);
+                        mq_send(clients[i].client_queue, bullmsg, strlen(bullmsg) + 1, 0);
+                        //printf("Sent to %s: %s\n", clients[i].name, client_msg);
                     }
                 }
             }
