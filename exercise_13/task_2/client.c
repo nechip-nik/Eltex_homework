@@ -7,6 +7,7 @@
 
 #define SERVER_QUEUE_NAME "/server_queue"
 #define MAX_MSG_SIZE 256
+#define CONNECT_PREFIX "CONNECT:"
 
 char client_name[50];
 mqd_t client_queue;
@@ -35,7 +36,6 @@ int main() {
     printf("Enter your name: ");
     scanf("%s", client_name);
 
-    // Create client queue
     char client_queue_name[50];
     sprintf(client_queue_name, "/client_queue_%s", client_name);
 
@@ -45,20 +45,18 @@ int main() {
         exit(1);
     }
 
-    // Connect to server
     mqd_t server_queue = mq_open(SERVER_QUEUE_NAME, O_WRONLY);
     if (server_queue == (mqd_t)-1) {
         perror("mq_open server queue");
         exit(1);
     }
 
-    // Send client name to server
-    mq_send(server_queue, client_name, strlen(client_name) + 1, 0);
+    char connect_msg[MAX_MSG_SIZE];
+    sprintf(connect_msg, "%s%s", CONNECT_PREFIX, client_name);
+    mq_send(server_queue, connect_msg, strlen(connect_msg) + 1, 0);
 
-    // Start thread to receive messages
     pthread_create(&thread, NULL, receive_messages, NULL);
 
-    // Send messages to server
     char msg[MAX_MSG_SIZE];
     while (1) {
         printf("Enter message: ");
@@ -72,8 +70,7 @@ int main() {
                 full_msg[i] = ' ';
             }
         }
-
-        mq_send(client_queue, full_msg, strlen(full_msg) + 1, 0);
+        mq_send(server_queue, msg, strlen(full_msg) + 1, 0);
     }
 
     mq_close(client_queue);

@@ -8,6 +8,7 @@
 #define SERVER_QUEUE_NAME "/server_queue"
 #define MAX_CLIENTS 10
 #define MAX_MSG_SIZE 256
+#define CONNECT_PREFIX "CONNECT:"
 
 typedef struct {
     mqd_t client_queue;
@@ -26,7 +27,7 @@ void* handle_client(void* arg) {
             for (int i = 0; i < client_count; i++) {
                 if (clients[i].client_queue != client->client_queue) {
                     mq_send(clients[i].client_queue, msg, strlen(msg) + 1, 0);
-                    printf("print to %i message %s\n", i, msg);
+                    printf("Sent to %s: %s\n", clients[i].name, msg);
                 }
             }
         }
@@ -53,34 +54,60 @@ int main() {
 
     char msg[MAX_MSG_SIZE];
     while (1) {
-        if (mq_receive(server_queue, msg, MAX_MSG_SIZE, NULL) != -1) {
-            printf("New client connected: %s\n", msg);
+        if (mq_receive(server_queue, msg, MAX_MSG_SIZE, NULL) == -1)
+        {
+            continue;
+        }
+        
+        printf("skip\n");
+            if (strncmp(msg, CONNECT_PREFIX, strlen(CONNECT_PREFIX)) == 0) {
+                // Это сообщение о подключении
+                char client_name[50];
+                strcpy(client_name, msg + strlen(CONNECT_PREFIX));
+                printf("New client connected: %s\n", client_name);
 
-            char client_queue_name[50];
-            sprintf(client_queue_name, "/client_queue_%s", msg);
+                char client_queue_name[50];
+                sprintf(client_queue_name, "/client_queue_%s", client_name);
 
-            mqd_t client_queue = mq_open(client_queue_name, O_CREAT | O_RDWR, 0666, &attr);
-            if (client_queue == (mqd_t)-1) {
-                perror("mq_open client queue");
-                continue;
-            }
-
-            if (client_count < MAX_CLIENTS) {
-                strcpy(clients[client_count].name, msg);
-                clients[client_count].client_queue = client_queue;
-                client_count++;
-
-                char join_msg[MAX_MSG_SIZE];
-                sprintf(join_msg, "%s joined the chat", msg);
-                for (int i = 0; i < client_count; i++) {
-                    mq_send(clients[i].client_queue, join_msg, strlen(join_msg) + 1, 0);
+                mqd_t client_queue = mq_open(client_queue_name, O_CREAT | O_RDWR, 0666, &attr);
+                if (client_queue == (mqd_t)-1) {
+                    perror("mq_open client queue");
+                    continue;
                 }
 
-                pthread_create(&threads[client_count - 1], NULL, handle_client, &clients[client_count - 1]);
+                if (client_count < MAX_CLIENTS) {
+                    strcpy(clients[client_count].name, client_name);
+                    clients[client_count].client_queue = client_queue;
+                    client_count++;
+
+                    char join_msg[MAX_MSG_SIZE];
+                    sprintf(join_msg, "%s joined the chat", client_name);
+                    for (int i = 0; i < client_count; i++) {
+                        if (clients[i].client_queue != client_queue) {
+                            mq_send(clients[i].client_queue, join_msg, strlen(join_msg) + 1, 0);
+                            printf("Sent to %s: %s\n", clients[i].name, join_msg);
+                        }
+                    }
+
+                    if (pthread_create(&threads[client_count - 1], NULL, handle_client, &clients[client_count - 1]) != 0) {
+                        perror("pthread_create");
+                        exit(1);
+                    }
+                } else {
+                    printf("Too many clients\n");
+                }
             } else {
-                printf("Too many clients\n");
+                // Это обычное сообщение
+                char* client_name = strtok(msg, ":");
+                char* client_msg = strtok(NULL, "");
+
+                for (int i = 0; i < client_count; i++) {
+                    if (strcmp(clients[i].name, client_name) != 0) {
+                        mq_send(clients[i].client_queue, msg, strlen(msg) + 1, 0);
+                        printf("Sent to %s: %s\n", clients[i].name, msg);
+                    }
+                }
             }
-        }
     }
 
     mq_close(server_queue);
