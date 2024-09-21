@@ -18,6 +18,7 @@ void* receive_messages(void* arg) {
     while (1) {
         if (mq_receive(client_queue, msg, MAX_MSG_SIZE, NULL) != -1) {
             printf("%s\n", msg);
+            //char* client_name = strtok(msg, ":");
         }
     }
 
