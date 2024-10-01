@@ -11,5 +11,7 @@ test_no_mutex
 test_mutex
 server
 client
+client_udp
+client_tcp
 multicast
 broadcast
