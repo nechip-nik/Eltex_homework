@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define PORT 8080
+#define PORT 8000
 #define BUFFER_SIZE 1024
 
 int main() {
