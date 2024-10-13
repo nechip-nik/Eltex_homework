@@ -126,26 +126,30 @@ int main() {
 
     pthread_create(&thread, NULL, receive_messages, NULL);
 
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_MSG_SIZE] = {0};
+    int msg_index = 0;
     while (1) {
         wclear(input_win);
         box(input_win, 0, 0);
-        mvwprintw(input_win, 1, 1, "Enter message: ");
+        mvwprintw(input_win, 1, 1, "Enter message: %s", msg);
         wrefresh(input_win);
 
-        echo();
-        wgetnstr(input_win, msg, MAX_MSG_SIZE - 1);
-        noecho();
-
-        char full_msg[MAX_MSG_SIZE];
-        sprintf(full_msg, "%s: %s", client_name, msg);
-
-        for (int i = 0; i < strlen(full_msg); i++) {
-            if (full_msg[i] == '\n') {
-                full_msg[i] = ' ';
+        int ch = getch();
+        if (ch == '\n') { // Enter key
+            if (msg_index > 0) {
+                char full_msg[MAX_MSG_SIZE];
+                sprintf(full_msg, "%s: %s", client_name, msg);
+                mq_send(server_queue, full_msg, strlen(full_msg) + 1, 0);
+                memset(msg, 0, sizeof(msg));
+                msg_index = 0;
             }
+        } else if (ch == KEY_BACKSPACE || ch == 127) { // Backspace key
+            if (msg_index > 0) {
+                msg[--msg_index] = '\0';
+            }
+        } else if (ch >= 32 && ch <= 126 && msg_index < MAX_MSG_SIZE - 1) { // Printable characters
+            msg[msg_index++] = ch;
         }
-        mq_send(server_queue, full_msg, strlen(full_msg) + 1, 0);
     }
 
     mq_close(client_queue);
