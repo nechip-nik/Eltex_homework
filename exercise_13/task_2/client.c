@@ -1,160 +1,212 @@
+#include <mqueue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mqueue.h>
-#include <pthread.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <signal.h>
 #include <ncurses.h>
 
-#define SERVER_QUEUE_NAME "/server_queue"
-#define MAX_MSG_SIZE 256
-#define CONNECT_PREFIX "CONNECT:"
-#define MAX_MESSAGES 100
-#define MAX_USERS 10
+#define QUEUE_NAME_READ "/queue_write"
+#define QUEUE_NAME_WRITE "/queue_read"
+#define MAX_SIZE 1024
+#define MAX_USERS 100
 
-typedef struct {
-    char username[50];
-    int online;
-} User;
-
-char client_name[50];
-mqd_t client_queue;
-char messages[MAX_MESSAGES][MAX_MSG_SIZE];
-int msg_count = 0;
-User users[MAX_USERS];
+char nickname[256];
+char sender_nickname[256]; 
+char users[MAX_USERS][256]; 
 int user_count = 0;
 
-void* receive_messages(void* arg) {
-    char msg[MAX_MSG_SIZE];
-    int max_y, max_x;
-    getmaxyx(stdscr, max_y, max_x);
-    WINDOW *chat_win = newwin(max_y - 3, max_x - 20, 0, 0);
-    WINDOW *users_win = newwin(max_y - 3, 19, 0, max_x - 20);
+WINDOW *chat_win, *users_win;
 
-    while (1) {
-        if (mq_receive(client_queue, msg, MAX_MSG_SIZE, NULL) != -1) {
-            if (msg_count < MAX_MESSAGES) {
-                strcpy(messages[msg_count], msg);
-                msg_count++;
-            } else {
-                for (int i = 0; i < MAX_MESSAGES - 1; i++) {
-                    strcpy(messages[i], messages[i + 1]);
-                }
-                strcpy(messages[MAX_MESSAGES - 1], msg);
-            }
+// Функция, которая будет выполняться в отдельном потоке для чтения сообщений
+void* receive_message(void* arg) {
+    mqd_t mq_read = *(mqd_t*)arg;
+    char buffer[MAX_SIZE];
+    ssize_t bytes_read;
 
-            // Обновление списка пользователей
-            char* client_name = strtok(msg, ":");
+    while ((bytes_read = mq_receive(mq_read, buffer, MAX_SIZE, NULL)) != -1) {
+        buffer[bytes_read] = '\0';
+        char* colon_pos = strchr(buffer, ':');
+        if (colon_pos != NULL) {
+            *colon_pos = '\0'; 
+            strncpy(sender_nickname, buffer, sizeof(sender_nickname) - 1);
+            sender_nickname[sizeof(sender_nickname) - 1] = '\0';
             int found = 0;
             for (int i = 0; i < user_count; i++) {
-                if (strcmp(users[i].username, client_name) == 0) {
-                    users[i].online = 1;
+                if (strcmp(users[i], sender_nickname) == 0) {
                     found = 1;
                     break;
                 }
             }
-            if (!found && user_count < MAX_USERS) {
-                strcpy(users[user_count].username, client_name);
-                users[user_count].online = 1;
+            if (!found) {
+                strncpy(users[user_count], sender_nickname, sizeof(users[user_count]) - 1);
+                users[user_count][sizeof(users[user_count]) - 1] = '\0';
                 user_count++;
+                wclear(users_win);
+                box(users_win, 0, 0);
+                for (int i = 0; i < user_count; i++) {
+                    mvwprintw(users_win, i + 1, 1, "%s", users[i]);
+                }
+                wrefresh(users_win);
             }
-
-            // Обновление окон
-            wclear(users_win);
-            box(users_win, 0, 0);
-            for (int i = 0; i < user_count; i++) {
-                mvwprintw(users_win, i + 1, 1, "%s %s", users[i].username, users[i].online ? "(online)" : "(offline)");
-            }
-            wrefresh(users_win);
-
-            wclear(chat_win);
-            box(chat_win, 0, 0);
-            for (int i = 0; i < msg_count && i < max_y - 4; i++) {
-                mvwprintw(chat_win, i + 1, 1, "%s", messages[msg_count - i - 1]);
-            }
+            mvwprintw(chat_win, LINES - 3, 0, "%s: %s", sender_nickname, colon_pos + 2); // +2 для пропуска пробела после ':'
+            wscrl(chat_win, 1); 
             wrefresh(chat_win);
+        } else {
+            mvwprintw(chat_win, LINES - 3, 0, "new connection");
+            wscrl(chat_win, 1);
+            wrefresh(chat_win);
+        }
+    }
+
+    perror("mq_receive");
+    return NULL;
+}
+
+// Функция, которая будет выполняться в отдельном потоке для отправки сообщений
+void* send_message(void* arg) {
+    mqd_t mq_write = *(mqd_t*)arg;
+    char response[MAX_SIZE];
+    int pos = 0;
+
+    while (1) {
+        // Ввод сообщения от пользователя
+        mvwaddstr(chat_win, LINES - 1, 0, "> ");
+        wrefresh(chat_win);
+
+        int ch = getch();
+        if (ch == '\n') {
+            // Убираем символ новой строки
+            response[pos] = '\0';
+            pos = 0;
+
+            if (strcmp(response, "exit") == 0) {
+                break;
+            }
+
+            // Формируем сообщение с ником
+            char message[MAX_SIZE];
+            snprintf(message, MAX_SIZE, "%s : %s", nickname, response);
+
+            // Отправляем сообщение в очередь на запись
+            if (mq_send(mq_write, message, strlen(message), 0) == -1) {
+                perror("mq_send");
+                exit(EXIT_FAILURE);
+            }
+
+            // Очищаем строку ввода
+            mvwprintw(chat_win, LINES - 1, 0, "                                        ");
+        } else if (ch == KEY_BACKSPACE || ch == 127) {
+            if (pos > 0) {
+                pos--;
+                mvwaddch(chat_win, LINES - 1, pos + 2, ' ');
+                wmove(chat_win, LINES - 1, pos + 2);
+                wrefresh(chat_win);
+            }
+        } else {
+            if (pos < MAX_SIZE - 1) {
+                response[pos++] = ch;
+                mvwaddch(chat_win, LINES - 1, pos + 2, ch);
+                wrefresh(chat_win);
+            }
         }
     }
 
     return NULL;
 }
 
-int main() {
-    struct mq_attr attr;
-    pthread_t thread;
+void cleanup(mqd_t mq_write, mqd_t mq_read) {
+    mq_close(mq_write);
+    mq_close(mq_read);
+}
 
+void sigint_handler(int sig) {
+    endwin(); // Завершаем работу с ncurses
+    exit(EXIT_SUCCESS);
+}
+
+int main() {
+    mqd_t mq_write, mq_read;
+    pthread_t recv_thread, send_thread;
+    struct mq_attr attr;
     attr.mq_flags = 0;
     attr.mq_maxmsg = 10;
-    attr.mq_msgsize = MAX_MSG_SIZE;
+    attr.mq_msgsize = MAX_SIZE;
     attr.mq_curmsgs = 0;
+
+    // Создаем уникальное имя очереди для клиента
+    char client_queue_name[256];
+    snprintf(client_queue_name, sizeof(client_queue_name), "/client_queue_%d", getpid());
+
+    // Создаем очередь на чтение для клиента
+    mq_read = mq_open(client_queue_name, O_CREAT | O_RDONLY, 0644, &attr);
+    if (mq_read == (mqd_t)-1) {
+        perror("mq_open (read)");
+        exit(EXIT_FAILURE);
+    }
+
+    // Открываем очередь на запись для сервера
+    mq_write = mq_open(QUEUE_NAME_WRITE, O_WRONLY);
+    if (mq_write == (mqd_t)-1) {
+        perror("mq_open (write)");
+        exit(EXIT_FAILURE);
+    }
 
     // Инициализация ncurses
     initscr();
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
-    int max_y, max_x;
-    getmaxyx(stdscr, max_y, max_x);
-    WINDOW *chat_win = newwin(max_y - 3, max_x - 20, 0, 0);
-    WINDOW *users_win = newwin(max_y - 3, 19, 0, max_x - 20);
-    WINDOW *input_win = newwin(3, max_x, max_y - 3, 0);
+    scrollok(stdscr, TRUE);
 
-    printw("Enter your name: ");
+    // Создаем окно чата
+    chat_win = newwin(LINES - 1, COLS - 20, 0, 0);
+    scrollok(chat_win, TRUE);
+    wrefresh(chat_win);
+
+    // Создаем окно пользователей
+    users_win = newwin(LINES - 1, 20, 0, COLS - 20);
+    box(users_win, 0, 0);
+    mvwprintw(users_win, 0, 1, "Users");
+    wrefresh(users_win);
+
+    // Ввод ника
+    mvprintw(0, 0, "Enter your nickname: ");
     refresh();
-    scanw("%s", client_name);
+    getstr(nickname);
+    nickname[strcspn(nickname, "\n")] = '\0';
 
-    char client_queue_name[50];
-    sprintf(client_queue_name, "/client_queue_%s", client_name);
-
-    client_queue = mq_open(client_queue_name, O_CREAT | O_RDWR, 0666, &attr);
-    if (client_queue == (mqd_t)-1) {
-        perror("mq_open client queue");
-        endwin();
-        exit(1);
+    // Регистрируем клиента на сервере
+    if (mq_send(mq_write, client_queue_name, strlen(client_queue_name), 0) == -1) {
+        perror("mq_send (register)");
+        exit(EXIT_FAILURE);
     }
 
-    mqd_t server_queue = mq_open(SERVER_QUEUE_NAME, O_WRONLY);
-    if (server_queue == (mqd_t)-1) {
-        perror("mq_open server queue");
-        endwin();
-        exit(1);
+    // Создаем поток для приема сообщения
+    if (pthread_create(&recv_thread, NULL, receive_message, &mq_read) != 0) {
+        perror("pthread_create (receive)");
+        exit(EXIT_FAILURE);
     }
 
-    char connect_msg[MAX_MSG_SIZE];
-    sprintf(connect_msg, "%s%s", CONNECT_PREFIX, client_name);
-    mq_send(server_queue, connect_msg, strlen(connect_msg) + 1, 0);
-
-    pthread_create(&thread, NULL, receive_messages, NULL);
-
-    char msg[MAX_MSG_SIZE] = {0};
-    int msg_index = 0;
-    while (1) {
-        wclear(input_win);
-        box(input_win, 0, 0);
-        mvwprintw(input_win, 1, 1, "Enter message: %s", msg);
-        wrefresh(input_win);
-
-        int ch = getch();
-        if (ch == '\n') { // Enter key
-            if (msg_index > 0) {
-                char full_msg[MAX_MSG_SIZE];
-                sprintf(full_msg, "%s: %s", client_name, msg);
-                mq_send(server_queue, full_msg, strlen(full_msg) + 1, 0);
-                memset(msg, 0, sizeof(msg));
-                msg_index = 0;
-            }
-        } else if (ch == KEY_BACKSPACE || ch == 127) { // Backspace key
-            if (msg_index > 0) {
-                msg[--msg_index] = '\0';
-            }
-        } else if (ch >= 32 && ch <= 126 && msg_index < MAX_MSG_SIZE - 1) { // Printable characters
-            msg[msg_index++] = ch;
-        }
+    // Создаем поток для отправки сообщения
+    if (pthread_create(&send_thread, NULL, send_message, &mq_write) != 0) {
+        perror("pthread_create (send)");
+        exit(EXIT_FAILURE);
     }
 
-    mq_close(client_queue);
+
+    // Ждем завершения потоков
+    pthread_join(recv_thread, NULL);
+    pthread_join(send_thread, NULL);
+
+    // Очистка и завершение работы
+    cleanup(mq_write, mq_read);
     mq_unlink(client_queue_name);
 
-    endwin();
+    delwin(chat_win);
+    delwin(users_win);
+    endwin(); // Завершаем работу с ncurses
+
     return 0;
 }
