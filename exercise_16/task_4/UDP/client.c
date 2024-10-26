@@ -42,6 +42,7 @@ int main() {
   strcpy(buf + sizeof(struct udp_header), "hello");
 
   // Отправка пакета
+  
   if (sendto(fd, buf, sizeof(struct udp_header) + strlen("hello") + 1, 0,
              (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
     perror("sendto");
@@ -56,7 +57,7 @@ int main() {
     int recv_len;
     struct sockaddr_in from_addr;
     socklen_t addr_len = sizeof(from_addr);
-
+    printf("recv\n");
     recv_len = recvfrom(fd, recev, BUF_SIZE, 0, (struct sockaddr *)&from_addr,
                         &addr_len);
     if (recv_len < 0) {
@@ -64,15 +65,19 @@ int main() {
       close(fd);
       exit(EXIT_FAILURE);
     }
+    printf("end_recv\n");
+    printf("Received %d bytes from %s:%d\n", recv_len,
+           inet_ntoa(from_addr.sin_addr), ntohs(from_addr.sin_port));
+    printf("Data: %s\n", recev + 28);
 
-    if ((from_addr.sin_addr.s_addr == inet_addr(SERVER_IP)) &&
-        (from_addr.sin_port == htons(0))) {
-      printf("Received %d bytes from %s:%d\n", recv_len,
-             inet_ntoa(from_addr.sin_addr), ntohs(from_addr.sin_port));
-      printf("Data: %s\n", recev + 28);
-      close(fd);
-      return 0;
-    }
+    // if ((from_addr.sin_addr.s_addr == inet_addr(SERVER_IP)) &&
+    //     (from_addr.sin_port == htons(0))) {
+    //   printf("Received %d bytes from %s:%d\n", recv_len,
+    //          inet_ntoa(from_addr.sin_addr), ntohs(from_addr.sin_port));
+    //   printf("Data: %s\n", recev + 28);
+    //   close(fd);
+    //   return 0;
+    // }
   }
 
   close(fd);
