@@ -34,17 +34,31 @@ typedef struct {
 SharedMemory *shm;
 sem_t *sem;
 char client_name[20];
+WINDOW *chat_win, *input_win, *users_win;
 
 void *receive_messages(void *arg) {
   while (1) {
     sem_wait(sem);
 
-    for (int i = 0; i < shm->message_count; i++) {
-      mvprintw(i, 0, "[%s]: %s", shm->messages[i].sender,
-               shm->messages[i].message);
+    // Очищаем только содержимое окна chat_win
+    wclear(chat_win);
+    int max_y, max_x;
+    getmaxyx(chat_win, max_y, max_x);
+    int start_index =
+        shm->message_count > max_y - 2 ? shm->message_count - (max_y - 2) : 0;
+    for (int i = start_index; i < shm->message_count; i++) {
+      mvwprintw(chat_win, i - start_index, 0, "[%s]: %s",
+                shm->messages[i].sender, shm->messages[i].message);
     }
+    wrefresh(chat_win);
 
-    refresh();
+    // Очищаем только содержимое окна users_win
+    wclear(users_win);
+    for (int i = 0; i < shm->client_count; i++) {
+      mvwprintw(users_win, i + 1, 0, "%s", shm->clients[i].name);
+    }
+    wrefresh(users_win);
+
     sem_post(sem);
     sleep(1);
   }
@@ -88,18 +102,30 @@ int main() {
   noecho();
   scrollok(stdscr, TRUE);
 
-  printw("Enter your name: ");
+  int max_y, max_x;
+  getmaxyx(stdscr, max_y, max_x);
+
+  chat_win = newwin(max_y - 3, max_x - 20, 0, 0);
+  input_win = newwin(3, max_x, max_y - 3, 0);
+  users_win = newwin(max_y - 3, 20, 0, max_x - 20);
+
+  // Включаем прокрутку для окна чата
+  scrollok(chat_win, TRUE);
+
+  refresh();
+  wrefresh(chat_win);
+  wrefresh(input_win);
+  wrefresh(users_win);
+
   refresh();
   getnstr(client_name, 19);
 
   sem_wait(sem);
-  for (int i = 0; i < MAX_CLIENTS; i++) {
-    if (shm->clients[i].active == 0) {
-      strncpy(shm->clients[i].name, client_name, 20);
-      shm->clients[i].active = 1;
-      shm->client_count++;
-      break;
-    }
+  int client_index = shm->client_count;
+  if (client_index < MAX_CLIENTS) {
+    strncpy(shm->clients[client_index].name, client_name, 20);
+    shm->clients[client_index].active = 1;
+    shm->client_count++;
   }
   sem_post(sem);
 
@@ -108,9 +134,10 @@ int main() {
 
   char msg[MAX_MSG_LEN];
   while (1) {
-    mvprintw(shm->message_count, 0, "%s: ", client_name);
-    refresh();
-    getnstr(msg, MAX_MSG_LEN - 1);
+    wmove(input_win, 1, 0);
+    wprintw(input_win, "%s: ", client_name);
+    wrefresh(input_win);
+    wgetnstr(input_win, msg, MAX_MSG_LEN - 1);
     send_message(msg);
   }
 

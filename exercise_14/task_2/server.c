@@ -79,10 +79,10 @@ int main() {
 
     for (int i = 0; i < shm->client_count; i++) {
       if (shm->clients[i].active) {
-        for (int j = 0; j < shm->message_count; j++) {
-          printf("[%s]: %s\n", shm->messages[j].sender,
-                 shm->messages[j].message);
-        }
+        // for (int j = 0; j < shm->message_count; j++) {
+        //   printf("[%s]: %s\n", shm->messages[j].sender,
+        //          shm->messages[j].message);
+        // }
         shm->clients[i].active = 0;
       }
     }
