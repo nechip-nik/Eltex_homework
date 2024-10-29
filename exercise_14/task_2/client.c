@@ -39,8 +39,6 @@ WINDOW *chat_win, *input_win, *users_win;
 void *receive_messages(void *arg) {
   while (1) {
     sem_wait(sem);
-
-    // Очищаем только содержимое окна chat_win
     wclear(chat_win);
     int max_y, max_x;
     getmaxyx(chat_win, max_y, max_x);
@@ -51,8 +49,6 @@ void *receive_messages(void *arg) {
                 shm->messages[i].sender, shm->messages[i].message);
     }
     wrefresh(chat_win);
-
-    // Очищаем только содержимое окна users_win
     wclear(users_win);
     for (int i = 0; i < shm->client_count; i++) {
       mvwprintw(users_win, i + 1, 0, "%s", shm->clients[i].name);
@@ -64,7 +60,6 @@ void *receive_messages(void *arg) {
   }
   return NULL;
 }
-
 void send_message(const char *msg) {
   sem_wait(sem);
 
@@ -76,14 +71,12 @@ void send_message(const char *msg) {
 
   sem_post(sem);
 }
-
 int main() {
   int shm_fd = shm_open(SHM_NAME, O_RDWR, 0666);
   if (shm_fd == -1) {
     perror("shm_open");
     exit(1);
   }
-
   shm = mmap(NULL, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED,
              shm_fd, 0);
   if (shm == MAP_FAILED) {
@@ -108,18 +101,13 @@ int main() {
   chat_win = newwin(max_y - 3, max_x - 20, 0, 0);
   input_win = newwin(3, max_x, max_y - 3, 0);
   users_win = newwin(max_y - 3, 20, 0, max_x - 20);
-
-  // Включаем прокрутку для окна чата
   scrollok(chat_win, TRUE);
-
   refresh();
   wrefresh(chat_win);
   wrefresh(input_win);
   wrefresh(users_win);
-
   refresh();
   getnstr(client_name, 19);
-
   sem_wait(sem);
   int client_index = shm->client_count;
   if (client_index < MAX_CLIENTS) {
@@ -128,10 +116,8 @@ int main() {
     shm->client_count++;
   }
   sem_post(sem);
-
   pthread_t thread;
   pthread_create(&thread, NULL, receive_messages, NULL);
-
   char msg[MAX_MSG_LEN];
   while (1) {
     wmove(input_win, 1, 0);
@@ -140,7 +126,6 @@ int main() {
     wgetnstr(input_win, msg, MAX_MSG_LEN - 1);
     send_message(msg);
   }
-
   endwin();
   munmap(shm, sizeof(SharedMemory));
   sem_close(sem);
