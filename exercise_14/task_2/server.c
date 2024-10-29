@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <semaphore.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,73 +9,81 @@
 
 #define SHM_NAME "/chat_shm"
 #define SEM_NAME "/chat_sem"
-#define SHM_SIZE 1024
 #define MAX_CLIENTS 10
 #define MAX_MSG_LEN 256
+#define MAX_MESSAGES 100
 
 typedef struct {
   char name[20];
-  char message[MAX_MSG_LEN];
-} ChatMessage;
+  int active;
+} Client;
 
 typedef struct {
+  char message[MAX_MSG_LEN];
+  char sender[20];
+} Message;
+
+typedef struct {
+  Client clients[MAX_CLIENTS];
+  Message messages[MAX_MESSAGES];
   int client_count;
-  ChatMessage messages[MAX_CLIENTS];
-} ChatRoom;
+  int message_count;
+} SharedMemory;
+
+SharedMemory *shm;
+sem_t *sem;
+
+void cleanup() {
+  shm_unlink(SHM_NAME);
+  sem_unlink(SEM_NAME);
+  munmap(shm, sizeof(SharedMemory));
+  sem_close(sem);
+}
+
+void sigint_handler(int sig) {
+  cleanup();
+  exit(0);
+}
 
 int main() {
-  int shm_fd;
-  ChatRoom *chat_room;
-  sem_t *sem;
+  signal(SIGINT, sigint_handler);
 
-  // Создаем сегмент разделяемой памяти
-  shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
+  int shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
   if (shm_fd == -1) {
     perror("shm_open");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Устанавливаем размер сегмента
-  if (ftruncate(shm_fd, SHM_SIZE) == -1) {
+  if (ftruncate(shm_fd, sizeof(SharedMemory)) == -1) {
     perror("ftruncate");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Отображаем сегмент в память
-  chat_room = (ChatRoom *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
-                               shm_fd, 0);
-  if (chat_room == MAP_FAILED) {
+  shm = mmap(NULL, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED,
+             shm_fd, 0);
+  if (shm == MAP_FAILED) {
     perror("mmap");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Инициализируем семафор
   sem = sem_open(SEM_NAME, O_CREAT, 0666, 1);
   if (sem == SEM_FAILED) {
     perror("sem_open");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Инициализируем чат-комнату
-  chat_room->client_count = 0;
-
-  printf("Server: Chat room initialized.\n");
+  memset(shm, 0, sizeof(SharedMemory));
 
   while (1) {
     sem_wait(sem);
 
-    // Проверяем новые сообщения
-    for (int i = 0; i < chat_room->client_count; i++) {
-      if (chat_room->messages[i].message[0] != '\0') {
-        // Рассылаем сообщение всем клиентам
-        for (int j = 0; j < chat_room->client_count; j++) {
-          if (i != j) {
-            strcpy(chat_room->messages[j].message,
-                   chat_room->messages[i].message);
-          }
+    for (int i = 0; i < shm->client_count; i++) {
+      if (shm->clients[i].active) {
+        for (int j = 0; j < shm->message_count; j++) {
+          printf("[%s]: %s\n", shm->messages[j].sender,
+                 shm->messages[j].message);
         }
-        // Очищаем сообщение отправителя
-        chat_room->messages[i].message[0] = '\0';
+        shm->clients[i].active = 0;
       }
     }
 
@@ -82,37 +91,6 @@ int main() {
     sleep(1);
   }
 
-  // Удаляем отображение памяти
-  if (munmap(chat_room, SHM_SIZE) == -1) {
-    perror("munmap");
-    exit(EXIT_FAILURE);
-  }
-
-  // Закрываем дескриптор разделяемой памяти
-  if (close(shm_fd) == -1) {
-    perror("close");
-    exit(EXIT_FAILURE);
-  }
-
-  // Удаляем сегмент разделяемой памяти
-  if (shm_unlink(SHM_NAME) == -1) {
-    perror("shm_unlink");
-    exit(EXIT_FAILURE);
-  }
-
-  // Закрываем семафор
-  if (sem_close(sem) == -1) {
-    perror("sem_close");
-    exit(EXIT_FAILURE);
-  }
-
-  // Удаляем семафор
-  if (sem_unlink(SEM_NAME) == -1) {
-    perror("sem_unlink");
-    exit(EXIT_FAILURE);
-  }
-
-  printf("Server: Shared memory segment and semaphore removed.\n");
-
+  cleanup();
   return 0;
 }

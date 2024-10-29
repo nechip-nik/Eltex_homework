@@ -1,4 +1,6 @@
 #include <fcntl.h>
+#include <ncurses.h>
+#include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,120 +10,112 @@
 
 #define SHM_NAME "/chat_shm"
 #define SEM_NAME "/chat_sem"
-#define SHM_SIZE 1024
 #define MAX_CLIENTS 10
 #define MAX_MSG_LEN 256
+#define MAX_MESSAGES 100
 
 typedef struct {
   char name[20];
-  char message[MAX_MSG_LEN];
-} ChatMessage;
+  int active;
+} Client;
 
 typedef struct {
+  char message[MAX_MSG_LEN];
+  char sender[20];
+} Message;
+
+typedef struct {
+  Client clients[MAX_CLIENTS];
+  Message messages[MAX_MESSAGES];
   int client_count;
-  ChatMessage messages[MAX_CLIENTS];
-} ChatRoom;
+  int message_count;
+} SharedMemory;
+
+SharedMemory *shm;
+sem_t *sem;
+char client_name[20];
+
+void *receive_messages(void *arg) {
+  while (1) {
+    sem_wait(sem);
+
+    for (int i = 0; i < shm->message_count; i++) {
+      mvprintw(i, 0, "[%s]: %s", shm->messages[i].sender,
+               shm->messages[i].message);
+    }
+
+    refresh();
+    sem_post(sem);
+    sleep(1);
+  }
+  return NULL;
+}
+
+void send_message(const char *msg) {
+  sem_wait(sem);
+
+  if (shm->message_count < MAX_MESSAGES) {
+    strncpy(shm->messages[shm->message_count].message, msg, MAX_MSG_LEN);
+    strncpy(shm->messages[shm->message_count].sender, client_name, 20);
+    shm->message_count++;
+  }
+
+  sem_post(sem);
+}
 
 int main() {
-  int shm_fd;
-  ChatRoom *chat_room;
-  sem_t *sem;
-  char name[20];
-  char message[MAX_MSG_LEN];
-
-  // Открываем существующий сегмент разделяемой памяти
-  shm_fd = shm_open(SHM_NAME, O_RDWR, 0666);
+  int shm_fd = shm_open(SHM_NAME, O_RDWR, 0666);
   if (shm_fd == -1) {
     perror("shm_open");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Отображаем сегмент в память
-  chat_room = (ChatRoom *)mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
-                               shm_fd, 0);
-  if (chat_room == MAP_FAILED) {
+  shm = mmap(NULL, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED,
+             shm_fd, 0);
+  if (shm == MAP_FAILED) {
     perror("mmap");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Открываем семафор
   sem = sem_open(SEM_NAME, 0);
   if (sem == SEM_FAILED) {
     perror("sem_open");
-    exit(EXIT_FAILURE);
+    exit(1);
   }
 
-  // Вводим имя клиента
-  printf("Enter your name: ");
-  fgets(name, sizeof(name), stdin);
-  name[strcspn(name, "\n")] = 0; // Удаляем символ новой строки
+  initscr();
+  cbreak();
+  noecho();
+  scrollok(stdscr, TRUE);
 
-  // Регистрируем клиента в чат-комнате
-  sem_wait(sem);
-  if (chat_room->client_count < MAX_CLIENTS) {
-    strcpy(chat_room->messages[chat_room->client_count].name, name);
-    chat_room->client_count++;
-    printf("Client: Registered as %s\n", name);
-  } else {
-    printf("Client: Chat room is full.\n");
-    exit(EXIT_FAILURE);
-  }
-  sem_post(sem);
+  printw("Enter your name: ");
+  refresh();
+  getnstr(client_name, 19);
 
-  // Получаем все сообщения в комнате
   sem_wait(sem);
-  for (int i = 0; i < chat_room->client_count; i++) {
-    if (chat_room->messages[i].message[0] != '\0') {
-      printf("%s: %s\n", chat_room->messages[i].name,
-             chat_room->messages[i].message);
+  for (int i = 0; i < MAX_CLIENTS; i++) {
+    if (shm->clients[i].active == 0) {
+      strncpy(shm->clients[i].name, client_name, 20);
+      shm->clients[i].active = 1;
+      shm->client_count++;
+      break;
     }
   }
   sem_post(sem);
 
-  // Отправляем сообщения в общий чат
+  pthread_t thread;
+  pthread_create(&thread, NULL, receive_messages, NULL);
+
+  char msg[MAX_MSG_LEN];
   while (1) {
-    printf("Enter message: ");
-    fgets(message, sizeof(message), stdin);
-    message[strcspn(message, "\n")] = 0; // Удаляем символ новой строки
-
-    sem_wait(sem);
-    for (int i = 0; i < chat_room->client_count; i++) {
-      if (strcmp(chat_room->messages[i].name, name) == 0) {
-        strcpy(chat_room->messages[i].message, message);
-        break;
-      }
-    }
-    sem_post(sem);
-
-    // Выводим все сообщения в комнате
-    sem_wait(sem);
-    for (int i = 0; i < chat_room->client_count; i++) {
-      if (chat_room->messages[i].message[0] != '\0') {
-        printf("%s: %s\n", chat_room->messages[i].name,
-               chat_room->messages[i].message);
-        chat_room->messages[i].message[0] = '\0'; // Очищаем сообщение
-      }
-    }
-    sem_post(sem);
+    mvprintw(shm->message_count, 0, "%s: ", client_name);
+    refresh();
+    getnstr(msg, MAX_MSG_LEN - 1);
+    send_message(msg);
   }
 
-  // Удаляем отображение памяти
-  if (munmap(chat_room, SHM_SIZE) == -1) {
-    perror("munmap");
-    exit(EXIT_FAILURE);
-  }
-
-  // Закрываем дескриптор разделяемой памяти
-  if (close(shm_fd) == -1) {
-    perror("close");
-    exit(EXIT_FAILURE);
-  }
-
-  // Закрываем семафор
-  if (sem_close(sem) == -1) {
-    perror("sem_close");
-    exit(EXIT_FAILURE);
-  }
-
+  endwin();
+  munmap(shm, sizeof(SharedMemory));
+  sem_close(sem);
   return 0;
 }
