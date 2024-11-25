@@ -1,0 +1,15 @@
+1. Кофигурирую ядро(x86)
+1.1 make defconfig 
+1.2 make menuconfig (включаю General setup -> Initial RAM filesystem and RAM disk (initramfs/initrd) support | Device Drivers -> Block devices -> RAM block device support)
+1.3 make (получаю bzImage)
+
+2. Кофигурирую файловую систему с помощью Busybox
+2.1 make defconfig
+2.2 make menuconfig(включаю Settings -> Build Options -> Build BusyBox as a static binary (no shared libs))
+2.3 make
+2.4 make install
+2.5 cd _install 
+2.6 find . | cpio -o -H newc | gzip > initramfs.cpio.gz 
+
+3. Запускаю ядро в QEMU
+3.1 qemu-system-x86_64     -kernel bzImage     -initrd initramfs.cpio.gz     -append "console=ttyS0 rdinit=bin/ash"     -nographic
