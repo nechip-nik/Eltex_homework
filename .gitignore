@@ -15,3 +15,10 @@ client_udp
 client_tcp
 multicast
 broadcast
+qemu-9.2.0-rc0.tar.xz
+openssh-9.0p1.tar.gz
+.config
+openssh-9.0p1
+linux
+ARM
+x86
