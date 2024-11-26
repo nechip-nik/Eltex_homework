@@ -1,0 +1,26 @@
+1. Собираю ядро arm
+1.1 ARCH=arm make defconfig
+1.2 ARCH=arm make CROSS_COMPILE=arm-linux-gnueabihf- zImage (получаем zImage)
+
+2. Собираю dtb-файлову
+2.1 ARCH=arm make dtbs
+2.2 Выбираю файл vexpress-v2p-ca9.dtb
+
+3 Cобираю с помощью init.
+3.1 arm-linux-gnueabihf-gcc -static init.c -o init
+3.2 echo init | cpio -o -H newc | gzip > initramfs_1.cpio.gz 
+
+4. Запускаю ядро
+4.1 QEMU_AUDIO_DRV=none qemu-system-arm -M vexpress-a9 -kernel zImage -dtb vexpress-v2p-ca9.dtb -initrd initramfs_1.cpio.gz -append "console=ttyAMA0" -nographic
+
+
+5. Кофигурирую файловую систему и собираем с помощью Busybox
+5.1 ARCH=arm make defconfig
+5.2 ARCH=arm make menuconfig(включаю Settings -> Build Options -> Build BusyBox as a static binary (no shared libs) | Settings -> Build Options -> CROSS_COMPILE=arm-linux-gnueabihf-)
+5.3 ARCH=arm make
+5.4 ARCH=arm make install
+5.5 cd _install 
+5.6 find . | cpio -o -H newc | gzip > initramfs_2.cpio.gz 
+
+6. Запускаю ядро
+6.1 QEMU_AUDIO_DRV=none qemu-system-arm -M vexpress-a9 -kernel zImage -dtb vexpress-v2p-ca9.dtb -initrd initramfs_2.cpio.gz -append "console=ttyAMA0 rdinit=bin/ash" -nographic
