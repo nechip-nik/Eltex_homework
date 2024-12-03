@@ -1,0 +1,18 @@
+1. Собираю (zlib)
+1.1 CC=arm-linux-gnueabihf-gcc ./configure --static --prefix=$PWD/_install
+1.2 make
+1.3 make install
+
+2 Собираю (OpenSSL)
+2.1 ./Configure linux-armv4 --prefix=$PWD/_install --cross-compile-prefix=arm-linux-gnueabihf- no-shared
+2.2 make depend
+2.3 make build_libs
+2.4 make build_programs LDFLAGS="-static"
+2.5 make install
+
+3 Собираю (OpenSSH)
+3.1./configure --host=arm-linux-gnueabihf --prefix=$PWD/_install --with-ssl-dir=/home/nikita/exercise_19/openssl-1.1.1c --with-zlib=/home/nikita/exercise_19/zlib-1.2.13 --disable-strip LDFLAGS="-static"
+3.2 make
+
+4 Запускаю
+4.1 QEMU_AUDIO_DRV=none qemu-system-arm -M vexpress-a9 -kernel zImage -dtb vexpress-v2p-ca9.dtb -initrd initramfs_3.cpio.gz -append "console=ttyAMA0 rdinit=bin/ash" -nographic 
