@@ -22,3 +22,9 @@ openssh-9.0p1
 linux
 ARM
 x86
+openssl
+ssh
+zlib-1.1.4
+*.o
+*.a
+history
