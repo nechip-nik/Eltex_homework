@@ -1,0 +1,20 @@
+scientific|The wolf is not the one who is the wolf, but the one ;who is the wolf.
+literary|All happy families are similar to each other, each unhappy ;family is unhappy in its own way. - Leo Tolstoy
+scientific| Science is not only knowledge, but also the ability to ;apply it. - Aristotle
+literary|Man is what he eats. - Ludwig Feuerbach
+scientific|We cannot solve problems using the same level of thinking ;that we used when we created them. - Albert Einstein
+literary|Time is the best teacher, but unfortunately it kills ;all its students. - Louis Bunuel
+scientific| Knowledge is power. - Francis Bacon
+literary|Happiness is not a goal, but a byproduct of how you live. ;- Eleanor Roosevelt
+scientific| Science is not only knowledge, but also the ability ;to apply it. - Aristotle
+literary|Everything we are is the result of what we thought. -
+scientific|Man is the measure of all things. - Protagoras
+literary|There is nothing more permanent in life than change. ;- Herodotus
+scientific|Science is a way of thinking, not just a set of ;knowledge. - Carl Sagan
+literary|A word is not just a sound, it is a power. ;- Friedrich Nietzsche
+scientific|Theory is, of course, good, but it is important that ;it is confirmed by practice. - Albert Einstein
+literary|Human is what he does. - Jean-Paul Sartre
+scientific|Science is the search for truth. - Galileo Galilei
+literary|We're all in this together, and it makes us stronger. ;- J. K. Rowling
+scientific|The scientific method is a way in which we can test ;our ideas. - Richard Feynman
+literary|Everyone is a book that needs to be read. ;- Mario Puzo

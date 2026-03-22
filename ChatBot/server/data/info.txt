@@ -1,0 +1,18 @@
+FilmBot welcomes you, your guide in the world of cinema! ;
+I was created to brighten up your gray everyday life and make it brighter with the help of ;movies, jokes and fascinating information.
+
+My list of features includes:  ;
+Search for a movie by name and provide a description for it;
+Giving out random jokes from the category of "funny" and "not funny". ;
+Don't you like my jokes? Then you can add your own! ;But if I don't like it already, then I can ban it! ;
+Don't worry, it's a joke too... Or not? ;
+Among other things, I can provide a random quote (for example, scientific or literary). ;
+
+Features:  ;
+I keep a history of our conversations, so you can always come back to interesting moments. ;
+If you enter the wrong command 3 times in a row, I will have to ban you. So be careful! ;
+
+To display the available commands, enter /help! ;
+
+The chatbot was created by an independent development team, all rights reserved. ; 
+Developers: Yegor Nazarov, Alexey Kochkarev, Nikita Nechiporovsky, Dmitry Dashuk  ;

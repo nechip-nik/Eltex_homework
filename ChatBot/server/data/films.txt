@@ -1,0 +1,30 @@
+1|The Matrix|science fiction, action|1999|Lana Wachowski, Lilly Wachowski
+2|Sleepy Hollow|thriller, fantasy, horror, detective|1999|Tim Burton
+3|The beginning|fiction, thriller|2010|Christopher Nolan
+4|The Dark Knight|action, crime, drama|2008|Christopher Nolan
+5|Interstellar|fantasy, drama|2014|Christopher Nolan
+6|The Shawshank Redemption|drama, crime|1994|Frank Darabont
+7|The Shining|horror, thriller|1980|Stanley Kubrick
+8|Forrest Gump|drama, comedy|1994|Robert Zemeckis
+9|Titanic|drama, romance|1997|James Cameron
+10|The Green Mile|drama, fiction|1999|Frank Darabont
+11|The Lord of the Rings: The Fellowship of the Ring|fantasy, adventure|2001|Peter Jackson
+12|The Lord of the Rings: The Two Fortresses|fantasy, adventure|2002|Peter Jackson
+13|The Lord of the Rings: The Return of the King|fantasy, adventure|2003|Peter Jackson
+14|Harry Potter and the Philosopher's Stone|fantasy, adventure|2001|Chris Columbus
+15|Harry Potter and the Chamber of Secrets|fantasy, adventure|2002|Chris Columbus
+16|Harry Potter and the Prisoner of Azkaban|fantasy, adventure|2004|Alfonso Cuaron
+17|Harry Potter and the Goblet of Fire|fantasy, adventure|2005|Mike Newell
+18|Harry Potter and the Order of the Phoenix|fantasy, adventure|2007|David Yates
+19|Harry Potter and the Half-Blood Prince|fantasy, adventure|2009|David Yates
+20|Harry Potter and the Deathly Hallows: Part 1|fantasy, adventure|2010|David Yates
+21|Harry Potter and the Deathly Hallows: Part 2|fantasy, adventure|2011|David Yates
+22|Pirates of the Caribbean: The Curse of the Black Pearl|adventure, fantasy|2003|Gore Verbinski
+23|Pirates of the Caribbean: At the Edge of the World|adventure, fantasy|2007|Gore Verbinski
+24|Pirates of the Caribbean: Dead Men Tell No Tales|adventure, fantasy|2017|Espen Sandberg, Joachim Renning
+25|Star Wars: Episode IV - A New Hope|fantasy, adventure|1977|George Lucas
+26|Star Wars: Episode V - The Empire Strikes Back|fantasy, adventure|1980|Irwin Kershner
+27|Star Wars: Episode VI - Return of the Jedi|fantasy, adventure|1983|Richard Marquand
+28|Star Wars: Episode I - The Hidden Menace|fantasy, adventure|1999|George Lucas
+29|Star Wars: Episode II - Attack of the Clones|fantasy, adventure|2002|George Lucas
+30|Star Wars: Episode III - Revenge of the Sith|fantasy, adventure|2005|George Lucas

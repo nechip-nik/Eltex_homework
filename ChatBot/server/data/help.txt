@@ -1,0 +1,11 @@
+/help - view available commands  ;
+/info - providing information about the bot  ;
+/exit - close the chat  ;
+/joke "funny/unfunny" - giving a random joke  ;
+/new_joke "funny/unfunny" "content" - add your quote  ;
+/quote "scientific/literary" - provide a random quote  ;
+/new_quote "scientific/literary" "content" - add your own joke  ;
+/name "title" - find a movie by title  ;
+/genre "genre" - select a movie by genre  ;
+/year "year" - find a movie by year  ;
+/director "director" - find out the films of the director                         ;
